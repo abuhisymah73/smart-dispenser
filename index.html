@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smart Dispenser App</title>
+  <style>
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      text-align: center; 
+      background-color: #f0f4f8; 
+      padding: 20px;
+      margin: 0;
+    }
+    h1 { color: #2c3e50; }
+    .card { 
+      background: white; 
+      padding: 30px 20px; 
+      border-radius: 12px; 
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1); 
+      max-width: 350px; 
+      margin: 20px auto; 
+    }
+    .status-text {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      display: block;
+    }
+    button { 
+      padding: 12px 20px; 
+      font-size: 16px; 
+      font-weight: bold;
+      margin: 8px 4px; 
+      cursor: pointer; 
+      border: none; 
+      border-radius: 8px; 
+      color: white;
+      transition: 0.2s;
+      width: 140px;
+    }
+    button:active { transform: scale(0.95); }
+    button:disabled { background-color: #bdc3c7; cursor: not-allowed; opacity: 0.7;}
+    
+    .btn-auto { background-color: #3498db; }
+    .btn-manual { background-color: #f39c12; }
+    .btn-on { background-color: #2ecc71; }
+    .btn-off { background-color: #e74c3c; }
+  </style>
+
+  <!-- Import Library Firebase dari Google -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+
+  <h1>Smart Dispenser</h1>
+
+  <!-- Kartu untuk Mode -->
+  <div class="card">
+    <p style="margin:0; color:#7f8c8d;">Mode Saat Ini</p>
+    <span class="status-text" id="modeDisplay" style="color:#3498db;">Menghubungkan...</span>
+    
+    <button class="btn-auto" onclick="setMode('auto')">OTOMATIS</button>
+    <button class="btn-manual" onclick="setMode('manual')">MANUAL</button>
+  </div>
+
+  <!-- Kartu untuk Kontrol Pompa -->
+  <div class="card">
+    <p style="margin:0; color:#7f8c8d;">Status Pompa</p>
+    <span class="status-text" id="pumpDisplay">Menghubungkan...</span>
+    
+    <button id="btnOn" class="btn-on" onclick="setPump(true)" disabled>NYALAKAN</button>
+    <button id="btnOff" class="btn-off" onclick="setPump(false)" disabled>MATIKAN</button>
+  </div>
+
+  <script>
+    // 1. Konfigurasi Firebase Anda
+    const firebaseConfig = {
+      apiKey: "AIzaSyBX5243j3qDgBovy29yHmKF5EQ3DUM1bec",
+      
+      // === UBAH BAGIAN INI ===
+      databaseURL: "https://smart-dispenser-94040-default-rtdb.asia-southeast1.firebasedatabase.app" // Contoh: "https://dispenser-edu-rtdb.asia-southeast1.firebasedatabase.app"
+      // =======================
+    };
+
+    // 2. Inisialisasi Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // 3. Mendengarkan perubahan data di Database secara Real-time
+    db.ref('dispenser').on('value', (snapshot) => {
+      const data = snapshot.val();
+      
+      if(data) {
+        // --- Update Tampilan Mode ---
+        let modeText = document.getElementById('modeDisplay');
+        if(data.mode === 'auto') {
+          modeText.innerText = "OTOMATIS";
+          modeText.style.color = "#3498db";
+        } else {
+          modeText.innerText = "MANUAL";
+          modeText.style.color = "#f39c12";
+        }
+        
+        // --- Update Tampilan Pompa ---
+        let pumpText = document.getElementById('pumpDisplay');
+        if(data.pump === true) {
+          pumpText.innerText = "MENYALA";
+          pumpText.style.color = "#2ecc71";
+        } else {
+          pumpText.innerText = "MATI";
+          pumpText.style.color = "#e74c3c";
+        }
+
+        // --- Atur Kunci Tombol Pompa ---
+        // Jika mode auto, tombol nyala/mati dinonaktifkan (karena dikontrol sensor)
+        let btnOn = document.getElementById('btnOn');
+        let btnOff = document.getElementById('btnOff');
+        
+        if(data.mode === 'manual') {
+          btnOn.disabled = false;
+          btnOff.disabled = false;
+        } else {
+          btnOn.disabled = true;
+          btnOff.disabled = true;
+        }
+      }
+    });
+
+    // 4. Fungsi saat tombol Mode ditekan
+    function setMode(modeValue) {
+      db.ref('dispenser/mode').set(modeValue);
+      
+      // Demi keamanan, jika diubah ke manual, matikan pompa
+      if(modeValue === 'manual') {
+        db.ref('dispenser/pump').set(false);
+      }
+    }
+
+    // 5. Fungsi saat tombol Nyala/Mati ditekan
+    function setPump(pumpValue) {
+      db.ref('dispenser/pump').set(pumpValue);
+    }
+  </script>
+</body>
+</html>
